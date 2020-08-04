@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -20,6 +21,8 @@ var (
 )
 
 const apiRoot = "https://sentry.io/api/0"
+
+var userAgent = fmt.Sprintf("sntr go/%s", runtime.Version()[2:])
 
 const configPath = "config.json"
 
@@ -92,6 +95,7 @@ func doAPI(path string) ([]map[string]interface{}, error) {
 		return nil, err
 	}
 	req.Header.Add("Authorization", auth)
+	req.Header.Add("User-Agent", userAgent)
 
 	if *flagDebug {
 		b, err := httputil.DumpRequest(req, false)
