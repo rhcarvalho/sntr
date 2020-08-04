@@ -5,8 +5,8 @@ The `sntr` command-line program gives you convenient access to
 
 Features:
 
-- [ ] List organizations
-- [ ] List projects
+- [x] List organizations
+- [x] List projects
 - [ ] List project issues
 - [ ] Search issues
 - [ ] Get events in JSON format
