@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -20,14 +21,52 @@ var (
 
 const apiRoot = "https://sentry.io/api/0"
 
+const configPath = "config.json"
+
 var auth string
 
 func init() {
-	f, _ := os.Open("config.json")
+	err := loadConfig()
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			err = fmt.Errorf("missing required configuration file %s", configPath)
+		}
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func loadConfig() error {
+	f, err := os.Open(configPath)
+	if err != nil {
+		return err
+	}
 	dec := json.NewDecoder(f)
 	var cfg map[string]string
-	_ = dec.Decode(&cfg)
+	err = dec.Decode(&cfg)
+	if err != nil {
+		if errors.Is(err, io.EOF) {
+			err = fmt.Errorf("configuration file %s is empty", configPath)
+		}
+		if errors.Is(err, io.ErrUnexpectedEOF) {
+			err = fmt.Errorf("configuration file %s is invalid: %w", configPath, err)
+		}
+		var typeErr *json.UnmarshalTypeError
+		if errors.As(err, &typeErr) {
+			err = fmt.Errorf("configuration file %s is invalid: at offset %d: got %s, want object", configPath, typeErr.Offset, typeErr.Value)
+		}
+		var syntaxErr *json.SyntaxError
+		if errors.As(err, &syntaxErr) {
+			err = fmt.Errorf("configuration file %s is invalid: at offset %d: %w", configPath, syntaxErr.Offset, syntaxErr)
+		}
+		return err
+	}
+	token := cfg["token"]
+	if token == "" {
+		return errors.New(`configuration file missing "token" field`)
+	}
 	auth = fmt.Sprintf("Bearer %s", cfg["token"])
+	return nil
 }
 
 func endpointFor(path string) string {
