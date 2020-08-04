@@ -9,7 +9,10 @@ import (
 	"github.com/getsentry/sntr/internal/cmd"
 )
 
-var organizationProjectsRegexp = regexp.MustCompile("^(?:org|organization)s?/([^/]+)/projects$")
+var (
+	organizationProjectsRegexp = regexp.MustCompile(`^(?:org|organization)s?/([^/]+)/projects$`)
+	orgSlugSlashProjSlugRegexp = regexp.MustCompile(`^([^/]+)/([^/]+)$`)
+)
 
 func main() {
 	flag.Parse()
@@ -25,9 +28,13 @@ func main() {
 	default:
 		if m := organizationProjectsRegexp.FindStringSubmatch(arg); m != nil {
 			err = cmd.ListOrganizationProjects(m[1])
-		} else {
-			err = fmt.Errorf("unknown command: %s", arg)
+			break
 		}
+		if m := orgSlugSlashProjSlugRegexp.FindStringSubmatch(arg); m != nil {
+			err = cmd.ListProjectIssues(m[1], m[2])
+			break
+		}
+		err = fmt.Errorf("unknown command: %s", arg)
 	}
 
 	if err != nil {

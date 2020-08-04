@@ -169,3 +169,14 @@ func ListOrganizationProjects(slug string) error {
 	}
 	return nil
 }
+
+func ListProjectIssues(orgSlug, projSlug string) error {
+	issues, err := doAPI(fmt.Sprintf("projects/%s/%s/issues", orgSlug, projSlug))
+	if err != nil {
+		return err
+	}
+	for _, issue := range issues {
+		fmt.Printf("%s: %s\n", issue["shortId"], issue["title"])
+	}
+	return nil
+}

@@ -7,7 +7,7 @@ Features:
 
 - [x] List organizations
 - [x] List projects
-- [ ] List project issues
+- [x] List project issues
 - [ ] Search issues
 - [ ] Get events in JSON format
 - [ ] Send [test events](#test-events)
