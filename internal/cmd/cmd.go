@@ -85,14 +85,26 @@ func endpointFor(path string) string {
 	return b.String()
 }
 
-func doAPI(path string) ([]map[string]interface{}, error) {
+func getMultiple(path string) ([]map[string]interface{}, error) {
+	var ret []map[string]interface{}
+	err := get(path, &ret)
+	return ret, err
+}
+
+func getSingle(path string) (map[string]interface{}, error) {
+	var ret map[string]interface{}
+	err := get(path, &ret)
+	return ret, err
+}
+
+func get(path string, ret interface{}) error {
 	endpoint := endpointFor(path)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, "GET", endpoint, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	req.Header.Add("Authorization", auth)
 	req.Header.Add("User-Agent", userAgent)
@@ -100,14 +112,14 @@ func doAPI(path string) ([]map[string]interface{}, error) {
 	if *flagDebug {
 		b, err := httputil.DumpRequest(req, false)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		os.Stderr.Write(b)
 	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer resp.Body.Close()
 
@@ -115,13 +127,13 @@ func doAPI(path string) ([]map[string]interface{}, error) {
 		// Dump response minus body to stderr
 		b, err := httputil.DumpResponse(resp, false)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		os.Stderr.Write(b)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("API request failed with status: %s", resp.Status)
+		return fmt.Errorf("API request failed with status: %s", resp.Status)
 	}
 
 	if *flagJSON {
@@ -129,15 +141,13 @@ func doAPI(path string) ([]map[string]interface{}, error) {
 		_, err = io.Copy(os.Stdout, resp.Body)
 	} else {
 		dec := json.NewDecoder(resp.Body)
-		var m []map[string]interface{}
-		err := dec.Decode(&m)
-		return m, err
+		err = dec.Decode(ret)
 	}
-	return nil, err
+	return err
 }
 
 func ListOrganizations() error {
-	orgs, err := doAPI("organizations")
+	orgs, err := getMultiple("organizations")
 	if err != nil {
 		return err
 	}
@@ -148,7 +158,7 @@ func ListOrganizations() error {
 }
 
 func ListProjects() error {
-	projs, err := doAPI("projects")
+	projs, err := getMultiple("projects")
 	if err != nil {
 		return err
 	}
@@ -164,7 +174,7 @@ func ListProjects() error {
 
 func ListOrganizationProjects(slug string) error {
 	// TODO: limit to projects isMember=true
-	projs, err := doAPI(fmt.Sprintf("organizations/%s/projects", slug))
+	projs, err := getMultiple(fmt.Sprintf("organizations/%s/projects", slug))
 	if err != nil {
 		return err
 	}
@@ -175,12 +185,42 @@ func ListOrganizationProjects(slug string) error {
 }
 
 func ListProjectIssues(orgSlug, projSlug string) error {
-	issues, err := doAPI(fmt.Sprintf("projects/%s/%s/issues", orgSlug, projSlug))
+	issues, err := getMultiple(fmt.Sprintf("projects/%s/%s/issues", orgSlug, projSlug))
 	if err != nil {
 		return err
 	}
 	for _, issue := range issues {
 		fmt.Printf("%s: %s\n", issue["shortId"], issue["title"])
 	}
+	return nil
+}
+
+func GetOrganizationEvent(orgSlug, id string) error {
+	m, err := getSingle(fmt.Sprintf("organizations/%s/eventids/%s", orgSlug, id))
+	if err != nil {
+		return err
+	}
+	event, ok := m["event"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("event is not a JSON object: %#v", m["event"])
+	}
+	keys := make([]string, 0, len(event))
+	for k := range event {
+		keys = append(keys, k)
+	}
+	fmt.Printf("%s: %s\n", id, strings.Join(keys, ", "))
+	return nil
+}
+
+func GetOrganizationProjectEvent(orgSlug, projSlug, id string) error {
+	event, err := getSingle(fmt.Sprintf("projects/%s/%s/events/%s", orgSlug, projSlug, id))
+	if err != nil {
+		return err
+	}
+	keys := make([]string, 0, len(event))
+	for k := range event {
+		keys = append(keys, k)
+	}
+	fmt.Printf("%s: %s\n", id, strings.Join(keys, ", "))
 	return nil
 }

@@ -10,8 +10,10 @@ import (
 )
 
 var (
-	organizationProjectsRegexp = regexp.MustCompile(`^(?:org|organization)s?/([^/]+)/projects$`)
-	orgSlugSlashProjSlugRegexp = regexp.MustCompile(`^([^/]+)/([^/]+)$`)
+	organizationProjectsRegexp             = regexp.MustCompile(`^(?:org|organization)s?/([^/]+)/projects$`)
+	orgSlugSlashProjSlugRegexp             = regexp.MustCompile(`^([^/]+)/([^/]+)$`)
+	orgSlugSlashEventIDRegexp              = regexp.MustCompile(`^([^/]+)/([A-Fa-f0-9]{32})$`)
+	orgSlugSlashProjSlugSlashEventIDRegexp = regexp.MustCompile(`^([^/]+)/([^/]+)/([A-Fa-f0-9]{32})$`)
 )
 
 func main() {
@@ -26,6 +28,14 @@ func main() {
 	case "projects":
 		err = cmd.ListProjects()
 	default:
+		if m := orgSlugSlashEventIDRegexp.FindStringSubmatch(arg); m != nil {
+			err = cmd.GetOrganizationEvent(m[1], m[2])
+			break
+		}
+		if m := orgSlugSlashProjSlugSlashEventIDRegexp.FindStringSubmatch(arg); m != nil {
+			err = cmd.GetOrganizationProjectEvent(m[1], m[2], m[3])
+			break
+		}
 		if m := organizationProjectsRegexp.FindStringSubmatch(arg); m != nil {
 			err = cmd.ListOrganizationProjects(m[1])
 			break
