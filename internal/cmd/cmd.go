@@ -116,6 +116,10 @@ func doAPI(path string) ([]map[string]interface{}, error) {
 		os.Stderr.Write(b)
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API request failed with status: %s", resp.Status)
+	}
+
 	if *flagJSON {
 		// Dump response body to stdout
 		_, err = io.Copy(os.Stdout, resp.Body)
