@@ -17,9 +17,9 @@ own risk.
 
 Features:
 
-- [x] List organizations
-- [x] List projects
-- [x] List project issues
+- [x] List organizations: `sntr get organizations`
+- [x] List projects: `sntr get projects`
+- [x] List project issues: `sntr get ORG_SLUG/PROJ_SLUG`
 - [ ] Search issues
 - [ ] Get events in JSON format
 - [ ] Send [test events](#test-events)
