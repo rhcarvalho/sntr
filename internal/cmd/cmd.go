@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httputil"
+	"net/url"
 	"os"
 	"runtime"
 	"strings"
@@ -79,6 +80,9 @@ func endpointFor(path string) string {
 		b.WriteByte('/')
 	}
 	b.WriteString(path)
+	if u, err := url.Parse(b.String()); err == nil && u.RawQuery != "" {
+		return b.String()
+	}
 	if !strings.HasSuffix(path, "/") {
 		b.WriteByte('/')
 	}
