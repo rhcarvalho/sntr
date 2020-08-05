@@ -26,6 +26,7 @@ func NewRootCommand() *cobra.Command {
 		NewSendCommand(),
 		NewProxyCommand(),
 		NewExecCommand(),
+		NewCompletionCommand(),
 	)
 	return cmd
 }
