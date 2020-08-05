@@ -22,7 +22,7 @@ Features:
 - [x] List project issues: `sntr get ORG_SLUG/PROJ_SLUG`
 - [ ] Search issues
 - [ ] Get events in JSON format
-- [ ] Send [test events](#test-events)
+- [x] Send [test events](#test-events)
 - [ ] Create a (proxy)[#proxy] between your program and the Sentry ingestion API
 - [ ] Traces and transactions
 - [ ] List releases
