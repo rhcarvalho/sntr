@@ -3,6 +3,18 @@
 The `sntr` command-line program gives you convenient access to
 [Sentry](https://sentry.io) directly from your terminal.
 
+---
+
+**Disclaimer: this is not an official Sentry project.**
+
+Despite being under the `getsentry` GitHub organization, this project is only an
+experiment developed during Sentry's internal Hack Week 2020.
+
+Expect no support, expect things to be broken in unimaginable ways, use at your
+own risk.
+
+---
+
 Features:
 
 - [x] List organizations
