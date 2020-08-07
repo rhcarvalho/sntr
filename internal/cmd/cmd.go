@@ -10,6 +10,7 @@ import (
 	"net/http/httputil"
 	"os"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
@@ -89,9 +90,12 @@ func ListOrganizations(cfg *config.Config) error {
 	if err != nil {
 		return err
 	}
+	var out []string
 	for _, org := range orgs {
-		fmt.Println(org["slug"])
+		out = append(out, fmt.Sprint(org["slug"]))
 	}
+	sort.StringSlice(out).Sort()
+	fmt.Println(strings.Join(out, "\n"))
 	return nil
 }
 
@@ -100,13 +104,18 @@ func ListProjects(cfg *config.Config) error {
 	if err != nil {
 		return err
 	}
+	var out []string
 	for _, proj := range projs {
 		org, ok := proj["organization"].(map[string]interface{})
 		if !ok {
 			return fmt.Errorf("organization is not a JSON object: %#v", proj["organization"])
 		}
-		fmt.Printf("%s/%s\n", org["slug"], proj["slug"])
+		out = append(out, fmt.Sprintf("%s/%s", org["slug"], proj["slug"]))
 	}
+	sort.Slice(out, func(i, j int) bool {
+		return strings.Replace(out[i], "/", "\x00", -1) < strings.Replace(out[j], "/", "\x00", -1)
+	})
+	fmt.Println(strings.Join(out, "\n"))
 	return nil
 }
 
