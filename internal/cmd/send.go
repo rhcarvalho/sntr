@@ -34,7 +34,7 @@ func NewSendCommand(cfg *config.Config) *cobra.Command {
 func (c *SendCommand) Run(cmd *cobra.Command, args []string) error {
 	orgSlug, projSlug := args[0], args[1]
 
-	s, err := getMultiple(c.cfg, fmt.Sprintf("projects/%s/%s/keys", orgSlug, projSlug))
+	s, err := c.cfg.Client.GetMultiple(fmt.Sprintf("projects/%s/%s/keys", orgSlug, projSlug))
 	if err != nil {
 		return err
 	}

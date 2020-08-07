@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
+
+	"github.com/getsentry/sntr/internal/client"
 )
 
 const defaultSentryURL = "https://sentry.io"
@@ -26,9 +26,10 @@ type Config struct {
 
 	ActiveOrganization string `json:"active_organization"`
 
-	Path       string `json:"-"`
-	APIRoot    string `json:"-"`
-	AuthString string `json:"-"`
+	Client     *client.Client `json:"-"`
+	Path       string         `json:"-"`
+	APIRoot    string         `json:"-"`
+	AuthString string         `json:"-"`
 }
 
 func LoadDefault() (*Config, error) {
@@ -70,6 +71,10 @@ func LoadDefault() (*Config, error) {
 	}
 	cfg.APIRoot = cfg.SentryURL + "/api/0"
 	cfg.AuthString = fmt.Sprintf("Bearer %s", cfg.AuthToken)
+	cfg.Client = &client.Client{
+		APIRoot:    cfg.APIRoot,
+		AuthString: cfg.AuthString,
+	}
 	return cfg, nil
 }
 
@@ -86,22 +91,6 @@ func (c *Config) Save() error {
 	defer f.Close()
 	enc := json.NewEncoder(f)
 	return enc.Encode(c)
-}
-
-func (c *Config) EndpointFor(path string) string {
-	var b strings.Builder
-	b.WriteString(c.APIRoot)
-	if !strings.HasPrefix(path, "/") {
-		b.WriteByte('/')
-	}
-	b.WriteString(path)
-	if u, err := url.Parse(b.String()); err == nil && u.RawQuery != "" {
-		return b.String()
-	}
-	if !strings.HasSuffix(path, "/") {
-		b.WriteByte('/')
-	}
-	return b.String()
 }
 
 type Organization struct {

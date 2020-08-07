@@ -81,7 +81,7 @@ func (c *GetCommand) Run(cmd *cobra.Command, args []string) error {
 func (c *GetCommand) RunDiscover(cmd *cobra.Command, args []string) error {
 	orgSlug := args[0]
 	fields := "field=project&field=timestamp&field=title&sort=-timestamp"
-	m, err := getSingle(c.cfg, fmt.Sprintf("organizations/%s/eventsv2/?query=%s&%s", orgSlug, url.QueryEscape(c.query), fields))
+	m, err := c.cfg.Client.GetSingle(fmt.Sprintf("organizations/%s/eventsv2/?query=%s&%s", orgSlug, url.QueryEscape(c.query), fields))
 	if err != nil {
 		return err
 	}
