@@ -10,15 +10,20 @@ import (
 )
 
 func main() {
+	if err := run(); err != nil {
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	cfg, err := config.LoadDefault()
 	if err == nil && cfg.AuthToken == "" {
 		err = errors.New(`configuration file missing "auth_token" field`)
 	}
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		return err
 	}
-	if err := cmd.Execute(cfg); err != nil {
-		os.Exit(1)
-	}
+	defer cfg.Save()
+	return cmd.Execute(cfg)
 }
