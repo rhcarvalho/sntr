@@ -80,11 +80,7 @@ func GetOrganizationEvent(cfg *config.Config, orgSlug, id string) error {
 	if !ok {
 		return fmt.Errorf("event is not a JSON object: %#v", m["event"])
 	}
-	keys := make([]string, 0, len(event))
-	for k := range event {
-		keys = append(keys, k)
-	}
-	fmt.Printf("%s: %s\n", id, strings.Join(keys, ", "))
+	fmt.Printf("%s: %s/organizations/%s/issues/%s/events/%[1]s/\n", id, cfg.SentryURL, orgSlug, event["groupID"])
 	return nil
 }
 

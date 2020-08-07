@@ -66,7 +66,7 @@ func (c *SendCommand) Run(cmd *cobra.Command, args []string) error {
 	log.Println("event sent:", *id)
 	log.Println("waiting to read it back")
 	defer func() {
-		log.Println("took", time.Since(start))
+		log.Println("took", time.Since(start).Truncate(10*time.Millisecond))
 	}()
 
 	return c.WaitEvent(orgSlug, string(*id))
@@ -74,12 +74,16 @@ func (c *SendCommand) Run(cmd *cobra.Command, args []string) error {
 
 func (c *SendCommand) WaitEvent(orgSlug, id string) error {
 	var err error
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 20; i++ {
 		err = GetOrganizationEvent(c.cfg, orgSlug, id)
 		if err == nil || !strings.Contains(err.Error(), "404") {
 			break
 		}
-		time.Sleep(1 << i * time.Second)
+		delay := 1 << (i / 2) * 100 * time.Millisecond
+		if delay > 2*time.Second {
+			delay = 2 * time.Second
+		}
+		time.Sleep(delay)
 	}
 	return err
 }
