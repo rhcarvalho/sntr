@@ -3,17 +3,17 @@ package cmd
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httputil"
-	"net/url"
 	"os"
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/getsentry/sntr/internal/config"
 )
 
 var (
@@ -21,88 +21,22 @@ var (
 	flagJSON  = flag.Bool("json", false, "Set output format to JSON")
 )
 
-const apiRoot = "https://sentry.io/api/0"
-
 var userAgent = fmt.Sprintf("sntr go/%s", runtime.Version()[2:])
 
-const configPath = "config.json"
-
-var auth string
-
-func init() {
-	err := loadConfig()
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			err = fmt.Errorf("missing required configuration file %s", configPath)
-		}
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-}
-
-func loadConfig() error {
-	f, err := os.Open(configPath)
-	if err != nil {
-		return err
-	}
-	dec := json.NewDecoder(f)
-	var cfg map[string]string
-	err = dec.Decode(&cfg)
-	if err != nil {
-		if errors.Is(err, io.EOF) {
-			err = fmt.Errorf("configuration file %s is empty", configPath)
-		}
-		if errors.Is(err, io.ErrUnexpectedEOF) {
-			err = fmt.Errorf("configuration file %s is invalid: %w", configPath, err)
-		}
-		var typeErr *json.UnmarshalTypeError
-		if errors.As(err, &typeErr) {
-			err = fmt.Errorf("configuration file %s is invalid: at offset %d: got %s, want object", configPath, typeErr.Offset, typeErr.Value)
-		}
-		var syntaxErr *json.SyntaxError
-		if errors.As(err, &syntaxErr) {
-			err = fmt.Errorf("configuration file %s is invalid: at offset %d: %w", configPath, syntaxErr.Offset, syntaxErr)
-		}
-		return err
-	}
-	token := cfg["token"]
-	if token == "" {
-		return errors.New(`configuration file missing "token" field`)
-	}
-	auth = fmt.Sprintf("Bearer %s", cfg["token"])
-	return nil
-}
-
-func endpointFor(path string) string {
-	var b strings.Builder
-	b.WriteString(apiRoot)
-	if !strings.HasPrefix(path, "/") {
-		b.WriteByte('/')
-	}
-	b.WriteString(path)
-	if u, err := url.Parse(b.String()); err == nil && u.RawQuery != "" {
-		return b.String()
-	}
-	if !strings.HasSuffix(path, "/") {
-		b.WriteByte('/')
-	}
-	return b.String()
-}
-
-func getMultiple(path string) ([]map[string]interface{}, error) {
+func getMultiple(cfg *config.Config, path string) ([]map[string]interface{}, error) {
 	var ret []map[string]interface{}
-	err := get(path, &ret)
+	err := get(cfg, path, &ret)
 	return ret, err
 }
 
-func getSingle(path string) (map[string]interface{}, error) {
+func getSingle(cfg *config.Config, path string) (map[string]interface{}, error) {
 	var ret map[string]interface{}
-	err := get(path, &ret)
+	err := get(cfg, path, &ret)
 	return ret, err
 }
 
-func get(path string, ret interface{}) error {
-	endpoint := endpointFor(path)
+func get(cfg *config.Config, path string, ret interface{}) error {
+	endpoint := cfg.EndpointFor(path)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -110,7 +44,7 @@ func get(path string, ret interface{}) error {
 	if err != nil {
 		return err
 	}
-	req.Header.Add("Authorization", auth)
+	req.Header.Add("Authorization", cfg.AuthString)
 	req.Header.Add("User-Agent", userAgent)
 
 	if *flagDebug {
@@ -150,8 +84,8 @@ func get(path string, ret interface{}) error {
 	return err
 }
 
-func ListOrganizations() error {
-	orgs, err := getMultiple("organizations")
+func ListOrganizations(cfg *config.Config) error {
+	orgs, err := getMultiple(cfg, "organizations")
 	if err != nil {
 		return err
 	}
@@ -161,8 +95,8 @@ func ListOrganizations() error {
 	return nil
 }
 
-func ListProjects() error {
-	projs, err := getMultiple("projects")
+func ListProjects(cfg *config.Config) error {
+	projs, err := getMultiple(cfg, "projects")
 	if err != nil {
 		return err
 	}
@@ -176,9 +110,9 @@ func ListProjects() error {
 	return nil
 }
 
-func ListOrganizationProjects(slug string) error {
+func ListOrganizationProjects(cfg *config.Config, slug string) error {
 	// TODO: limit to projects isMember=true
-	projs, err := getMultiple(fmt.Sprintf("organizations/%s/projects", slug))
+	projs, err := getMultiple(cfg, fmt.Sprintf("organizations/%s/projects", slug))
 	if err != nil {
 		return err
 	}
@@ -188,8 +122,8 @@ func ListOrganizationProjects(slug string) error {
 	return nil
 }
 
-func ListProjectIssues(orgSlug, projSlug string) error {
-	issues, err := getMultiple(fmt.Sprintf("projects/%s/%s/issues", orgSlug, projSlug))
+func ListProjectIssues(cfg *config.Config, orgSlug, projSlug string) error {
+	issues, err := getMultiple(cfg, fmt.Sprintf("projects/%s/%s/issues", orgSlug, projSlug))
 	if err != nil {
 		return err
 	}
@@ -199,8 +133,8 @@ func ListProjectIssues(orgSlug, projSlug string) error {
 	return nil
 }
 
-func GetOrganizationEvent(orgSlug, id string) error {
-	m, err := getSingle(fmt.Sprintf("organizations/%s/eventids/%s", orgSlug, id))
+func GetOrganizationEvent(cfg *config.Config, orgSlug, id string) error {
+	m, err := getSingle(cfg, fmt.Sprintf("organizations/%s/eventids/%s", orgSlug, id))
 	if err != nil {
 		return err
 	}
@@ -216,8 +150,8 @@ func GetOrganizationEvent(orgSlug, id string) error {
 	return nil
 }
 
-func GetOrganizationProjectEvent(orgSlug, projSlug, id string) error {
-	event, err := getSingle(fmt.Sprintf("projects/%s/%s/events/%s", orgSlug, projSlug, id))
+func GetOrganizationProjectEvent(cfg *config.Config, orgSlug, projSlug, id string) error {
+	event, err := getSingle(cfg, fmt.Sprintf("projects/%s/%s/events/%s", orgSlug, projSlug, id))
 	if err != nil {
 		return err
 	}

@@ -9,23 +9,32 @@ import (
 
 	"github.com/getsentry/sentry-go"
 	"github.com/spf13/cobra"
+
+	"github.com/getsentry/sntr/internal/config"
 )
 
-func NewSendCommand() *cobra.Command {
+type SendCommand struct {
+	cfg *config.Config
+}
+
+func NewSendCommand(cfg *config.Config) *cobra.Command {
+	c := &SendCommand{
+		cfg: cfg,
+	}
 	cmd := &cobra.Command{
 		Use:   "send ORGANIZATION_SLUG PROJECT_SLUG",
 		Short: "Send events",
 		Long:  `Send events to Sentry.`,
 		Args:  cobra.ExactArgs(2),
-		RunE:  runSend,
+		RunE:  c.Run,
 	}
 	return cmd
 }
 
-func runSend(cmd *cobra.Command, args []string) error {
+func (c *SendCommand) Run(cmd *cobra.Command, args []string) error {
 	orgSlug, projSlug := args[0], args[1]
 
-	s, err := getMultiple(fmt.Sprintf("projects/%s/%s/keys", orgSlug, projSlug))
+	s, err := getMultiple(c.cfg, fmt.Sprintf("projects/%s/%s/keys", orgSlug, projSlug))
 	if err != nil {
 		return err
 	}
@@ -57,13 +66,13 @@ func runSend(cmd *cobra.Command, args []string) error {
 		log.Println("took", time.Since(start))
 	}()
 
-	return waitEvent(orgSlug, string(*id))
+	return c.WaitEvent(orgSlug, string(*id))
 }
 
-func waitEvent(orgSlug, id string) error {
+func (c *SendCommand) WaitEvent(orgSlug, id string) error {
 	var err error
 	for i := 0; i < 5; i++ {
-		err = GetOrganizationEvent(orgSlug, id)
+		err = GetOrganizationEvent(c.cfg, orgSlug, id)
 		if err == nil || !strings.Contains(err.Error(), "404") {
 			break
 		}

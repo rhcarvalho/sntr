@@ -2,9 +2,11 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+
+	"github.com/getsentry/sntr/internal/config"
 )
 
-func NewProxyCommand() *cobra.Command {
+func NewProxyCommand(cfg *config.Config) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "proxy",
 		Short: "Start an HTTP proxy",

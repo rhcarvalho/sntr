@@ -5,11 +5,13 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/getsentry/sntr/internal/config"
 )
 
 var completionTargets = []string{"bash", "zsh", "fish", "powershell"}
 
-func NewCompletionCommand() *cobra.Command {
+func NewCompletionCommand(cfg *config.Config) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   fmt.Sprintf("completion [%s]", strings.Join(completionTargets, "|")),
 		Short: "Generate completion script",

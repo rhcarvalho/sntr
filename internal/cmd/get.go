@@ -8,6 +8,8 @@ import (
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
+
+	"github.com/getsentry/sntr/internal/config"
 )
 
 var (
@@ -17,22 +19,32 @@ var (
 	orgSlugSlashProjSlugSlashEventIDRegexp = regexp.MustCompile(`^([^/]+)/([^/]+)/([A-Fa-f0-9]{32})$`)
 )
 
-var query string
+type GetCommand struct {
+	cfg   *config.Config
+	query string
+}
 
-func NewGetCommand() *cobra.Command {
+func NewGetCommand(cfg *config.Config) *cobra.Command {
+	c := &GetCommand{
+		cfg: cfg,
+	}
 	cmd := &cobra.Command{
 		Use:   "get",
 		Short: "Get resource",
 		Long:  `Get resource.`,
-		RunE:  checkUsage(runGet),
+		ValidArgs: []string{
+			"organization", "organizations", "org", "orgs",
+			"project", "projects", "proj", "projs",
+		},
+		RunE: checkUsage(c.Run),
 	}
-	cmd.Flags().StringVarP(&query, "query", "q", "", "Query to search events like in Discover")
+	cmd.Flags().StringVarP(&c.query, "query", "q", "", "Query to search events like in Discover")
 	return cmd
 }
 
-func runGet(cmd *cobra.Command, args []string) error {
-	if query != "" {
-		return runDiscover(cmd, args)
+func (c *GetCommand) Run(cmd *cobra.Command, args []string) error {
+	if c.query != "" {
+		return c.RunDiscover(cmd, args)
 	}
 
 	if len(args) == 0 {
@@ -40,25 +52,25 @@ func runGet(cmd *cobra.Command, args []string) error {
 	}
 	var err error
 	switch arg := args[0]; arg {
-	case "organizations", "orgs":
-		err = ListOrganizations()
-	case "projects":
-		err = ListProjects()
+	case "organization", "organizations", "org", "orgs":
+		err = ListOrganizations(c.cfg)
+	case "project", "projects", "proj", "projs":
+		err = ListProjects(c.cfg)
 	default:
 		if m := orgSlugSlashEventIDRegexp.FindStringSubmatch(arg); m != nil {
-			err = GetOrganizationEvent(m[1], m[2])
+			err = GetOrganizationEvent(c.cfg, m[1], m[2])
 			break
 		}
 		if m := orgSlugSlashProjSlugSlashEventIDRegexp.FindStringSubmatch(arg); m != nil {
-			err = GetOrganizationProjectEvent(m[1], m[2], m[3])
+			err = GetOrganizationProjectEvent(c.cfg, m[1], m[2], m[3])
 			break
 		}
 		if m := organizationProjectsRegexp.FindStringSubmatch(arg); m != nil {
-			err = ListOrganizationProjects(m[1])
+			err = ListOrganizationProjects(c.cfg, m[1])
 			break
 		}
 		if m := orgSlugSlashProjSlugRegexp.FindStringSubmatch(arg); m != nil {
-			err = ListProjectIssues(m[1], m[2])
+			err = ListProjectIssues(c.cfg, m[1], m[2])
 			break
 		}
 		err = UsageError{fmt.Errorf("unknown command: %s", arg)}
@@ -66,10 +78,10 @@ func runGet(cmd *cobra.Command, args []string) error {
 	return err
 }
 
-func runDiscover(cmd *cobra.Command, args []string) error {
+func (c *GetCommand) RunDiscover(cmd *cobra.Command, args []string) error {
 	orgSlug := args[0]
 	fields := "field=project&field=timestamp&field=title&sort=-timestamp"
-	m, err := getSingle(fmt.Sprintf("organizations/%s/eventsv2/?query=%s&%s", orgSlug, url.QueryEscape(query), fields))
+	m, err := getSingle(c.cfg, fmt.Sprintf("organizations/%s/eventsv2/?query=%s&%s", orgSlug, url.QueryEscape(c.query), fields))
 	if err != nil {
 		return err
 	}

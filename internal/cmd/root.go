@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+
+	"github.com/getsentry/sntr/internal/config"
 )
 
 func init() {
@@ -14,7 +16,7 @@ type UsageError struct {
 	error
 }
 
-func NewRootCommand() *cobra.Command {
+func NewRootCommand(cfg *config.Config) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:          "sntr",
 		Short:        "Sentry command-line tool",
@@ -22,18 +24,18 @@ func NewRootCommand() *cobra.Command {
 		SilenceUsage: true,
 	}
 	cmd.AddCommand(
-		NewGetCommand(),
-		NewSendCommand(),
-		NewProxyCommand(),
-		NewExecCommand(),
-		NewCompletionCommand(),
+		NewGetCommand(cfg),
+		NewSendCommand(cfg),
+		NewProxyCommand(cfg),
+		NewExecCommand(cfg),
+		NewCompletionCommand(cfg),
 	)
 	return cmd
 }
 
 // Execute executes the root command.
-func Execute() error {
-	return NewRootCommand().Execute()
+func Execute(cfg *config.Config) error {
+	return NewRootCommand(cfg).Execute()
 }
 
 func notImplemented(cmd *cobra.Command, args []string) error {
