@@ -23,7 +23,7 @@ Features:
 - [x] Search issues: `sntr get --query`
 - [ ] Get events in JSON format
 - [x] Send [test events](#test-events): `sntr send`
-- [ ] Create a (proxy)[#proxy] between your program and the Sentry ingestion API
+- [x] Create a (proxy)[#proxy] between your program and the Sentry ingestion API
 - [ ] Traces and transactions
 - [ ] List releases
 - [ ] Multi DSN -- read/write multiple projects at once
