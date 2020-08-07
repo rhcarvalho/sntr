@@ -32,6 +32,7 @@ func NewRootCommand(cfg *config.Config) *cobra.Command {
 		NewConfigCommand(cfg),
 		NewCompletionCommand(cfg),
 	)
+	cmd.PersistentFlags().StringVar(&cfg.SentryURL, "sentry", cfg.SentryURL, "Sentry URL")
 	return cmd
 }
 
