@@ -43,6 +43,9 @@ func NewGetCommand(cfg *config.Config) *cobra.Command {
 }
 
 func (c *GetCommand) Run(cmd *cobra.Command, args []string) error {
+	if c.cfg.AuthToken == "" {
+		return errors.New(`missing authentication token: run "sntr login" to setup`)
+	}
 	if c.query != "" {
 		return c.RunDiscover(cmd, args)
 	}

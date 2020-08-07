@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
@@ -17,9 +16,6 @@ func main() {
 
 func run() error {
 	cfg, err := config.LoadDefault()
-	if err == nil && cfg.AuthToken == "" {
-		err = errors.New(`configuration file missing "auth_token" field`)
-	}
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return err

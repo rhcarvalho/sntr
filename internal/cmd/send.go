@@ -32,6 +32,9 @@ func NewSendCommand(cfg *config.Config) *cobra.Command {
 }
 
 func (c *SendCommand) Run(cmd *cobra.Command, args []string) error {
+	if c.cfg.AuthToken == "" {
+		return errors.New(`missing authentication token: run "sntr login" to setup`)
+	}
 	orgSlug, projSlug := args[0], args[1]
 
 	s, err := c.cfg.Client.GetMultiple(fmt.Sprintf("projects/%s/%s/keys", orgSlug, projSlug))
