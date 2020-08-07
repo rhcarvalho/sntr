@@ -28,6 +28,7 @@ func NewRootCommand(cfg *config.Config) *cobra.Command {
 		NewSendCommand(cfg),
 		NewProxyCommand(cfg),
 		NewExecCommand(cfg),
+		NewLoginCommand(cfg),
 		NewCompletionCommand(cfg),
 	)
 	return cmd

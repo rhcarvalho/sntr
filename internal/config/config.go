@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/getsentry/sntr/internal/client"
 )
@@ -70,11 +71,8 @@ func LoadDefault() (*Config, error) {
 		cfg.SentryURL = defaultSentryURL
 	}
 	cfg.APIRoot = cfg.SentryURL + "/api/0"
-	cfg.AuthString = fmt.Sprintf("Bearer %s", cfg.AuthToken)
-	cfg.Client = &client.Client{
-		APIRoot:    cfg.APIRoot,
-		AuthString: cfg.AuthString,
-	}
+	cfg.Client = &client.Client{APIRoot: cfg.APIRoot}
+	cfg.SetAuthToken(cfg.AuthToken)
 	return cfg, nil
 }
 
@@ -91,6 +89,44 @@ func (c *Config) Save() error {
 	defer f.Close()
 	enc := json.NewEncoder(f)
 	return enc.Encode(c)
+}
+
+func (c *Config) SetAuthToken(token string) {
+	c.AuthToken = token
+	c.Client.AuthString = fmt.Sprintf("Bearer %s", token)
+}
+
+func (c *Config) ObfuscatedAuthToken() string {
+	token := c.AuthToken
+	if len(token) < 16 {
+		return "***"
+	}
+	return token[:4] + "***" + token[len(token)-4:]
+}
+
+func (c *Config) VerifyToken() error {
+	m, err := c.Client.GetSingle("")
+	if err != nil {
+		return err
+	}
+	c.User = m["user"].(map[string]interface{})["email"].(string)
+
+	var requiredScopes = map[string]bool{
+		"org:read":     true,
+		"project:read": true,
+		"event:read":   true,
+	}
+	for _, scope := range m["auth"].(map[string]interface{})["scopes"].([]interface{}) {
+		delete(requiredScopes, scope.(string))
+	}
+	if len(requiredScopes) > 0 {
+		var missing []string
+		for scope := range requiredScopes {
+			missing = append(missing, scope)
+		}
+		fmt.Fprintf(os.Stderr, "Warning: authentication token %s missing required permissions: %s", c.ObfuscatedAuthToken(), strings.Join(missing, ", "))
+	}
+	return nil
 }
 
 type Organization struct {
