@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+set -eux
+
+SNTR_VERSION=0.0.1
+
+export GOARCH=amd64
+for GOOS in linux darwin; do
+  export GOOS
+  pth="dist/sntr${SNTR_VERSION}.${GOOS}-${GOARCH}"
+  go build -v -o ${pth}/sntr
+  tar -cvzf ${pth}.tar.gz -C ${pth} .
+done

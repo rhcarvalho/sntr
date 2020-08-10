@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+set -eux
+
+GO_VERSION=1.15rc2
+
+docker run --rm -v $PWD:/sntr -w /sntr golang:$GO_VERSION ./build-all
